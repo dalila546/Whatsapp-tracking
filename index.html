@@ -3,16 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Suivi des liens WhatsApp</title>
+    <title>WhatsApp Tracker</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #e5ddd5; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        body { font-family: 'Segoe UI', sans-serif; background: #e5ddd5; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
         .container { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 90%; max-width: 400px; text-align: center; }
         h2 { color: #075e54; margin-bottom: 20px; }
         input, textarea { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 14px; }
-        button { background: #25d366; color: white; border: none; padding: 12px; width: 100%; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.3s; }
-        button:hover { background: #128c7e; }
-        .result { margin-top: 20px; padding: 15px; background: #f0f0f0; border-radius: 8px; word-break: break-all; display: none; border-left: 5px solid #25d366; }
-        .footer { margin-top: 20px; font-size: 12px; color: #777; }
+        button { background: #25d366; color: white; border: none; padding: 12px; width: 100%; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .result { margin-top: 20px; padding: 15px; background: #f0f0f0; border-radius: 8px; word-break: break-all; display: none; border-left: 5px solid #25d366; text-align: left; }
     </style>
 </head>
 <body>
@@ -21,47 +19,57 @@
     <h2>Générateur de Lien</h2>
     <p style="font-size: 14px; color: #666;">Créez des liens traçables pour vos contacts.</p>
     
-    <input type="text" id="phone" placeholder="Numéro (ex: 213660000000)">
-    <textarea id="message" placeholder="Votre message pré-rempli..."></textarea>
+    <input type="text" id="phoneInput" placeholder="Numéro (ex: 213792288028)">
+    <textarea id="messageInput" placeholder="Votre message..."></textarea>
     
     <button onclick="generateLink()">Générer le lien de suivi</button>
     
-    <div id="result-box" class="result">
-        <p style="font-weight: bold; margin-top: 0;">Partagez ce lien :</p>
-        <code id="final-link" style="color: #075e54;"></code>
+    <div id="resultBox" class="result">
+        <p style="font-weight: bold; margin: 0 0 10px 0;">Partagez ce lien :</p>
+        <code id="finalLink" style="color: #075e54; font-size: 12px;"></code>
     </div>
-    
-    <div class="footer">Outil de suivi WhatsApp Pro</div>
 </div>
 
 <script>
-    // الرابط الخاص بكِ من Formspree
     const FORMSPREE_URL = "https://formspree.io/f/mojpalrd"; 
 
     function generateLink() {
-        const phone = document.getElementById('phone').value.replace(/\+/g, '');
-        const msg = encodeURIComponent(document.getElementById('message').value);
+        const phone = document.getElementById('phoneInput').value.trim().replace(/\+/g, '');
+        const msgText = document.getElementById('messageInput').value;
+        const msgEncoded = encodeURIComponent(msgText);
         const trackId = Math.random().toString(36).substring(7);
         
-        // الحصول على رابط الموقع الحالي
-        const baseLink = window.location.href.split('?')[0];
-        const finalUrl = `${baseLink}?track=${trackId}&phone=${phone}&msg=${msg}`;
+        if(!phone) { alert("Veuillez entrer un numéro"); return; }
+
+        const baseLink = window.location.origin + window.location.pathname;
+        const finalUrl = `${baseLink}?track=${trackId}&phone=${phone}&msg=${msgEncoded}`;
         
-        document.getElementById('result-box').style.display = 'block';
-        document.getElementById('final-link').innerText = finalUrl;
+        document.getElementById('resultBox').style.display = 'block';
+        document.getElementById('finalLink').innerText = finalUrl;
     }
 
-    // وظيفة التتبع والتحويل التلقائي
     async function trackAndRedirect() {
         const params = new URLSearchParams(window.location.search);
-        
         if (params.has('track')) {
-            // إظهار رسالة انتظار بسيطة
-            document.body.innerHTML = "<div class='container'><h4>Redirection vers WhatsApp en cours...</h4><p>Veuillez patienter.</p></div>";
+            document.body.innerHTML = "<div class='container'><h4>Redirection...</h4></div>";
             
-            const visitorData = {
-                id_suivi: params.get('track'),
-                destinataire: params.get('phone'),
-                appareil: navigator.userAgent,
-                provenance: document.referrer || "Lien direct",
-                date: new
+            try {
+                await fetch(FORMSPREE_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: params.get('track'),
+                        phone: params.get('phone'),
+                        time: new Date().toLocaleString('fr-FR'),
+                        device: navigator.userAgent
+                    })
+                });
+            } catch (e) {}
+
+            window.location.href = `https://wa.me/${params.get('phone')}?text=${params.get('msg')}`;
+        }
+    }
+    trackAndRedirect();
+</script>
+</body>
+</html>
